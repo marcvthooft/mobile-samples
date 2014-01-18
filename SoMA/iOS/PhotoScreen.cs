@@ -14,10 +14,6 @@ using Core;
 /*
  SoMA : Social Mobile Auth
 
-This file includes both the 'deprecated' and 'new' Photo Picker API.
-
-It will be updated shortly to *just* use the new API.
-
  */
 using System.Drawing;
 
@@ -26,9 +22,8 @@ namespace SoMA
 {
 	public partial class PhotoScreen : UIViewController
 	{
-#if !VISUALSTUDIO
+
 		MediaPickerController pickerController;
-#endif
 
 		string fileName = "", fileNameThumb = "";
 		string location = "";
@@ -67,51 +62,46 @@ namespace SoMA
 						Name = DateTime.Now.ToString("yyyyMMddHHmmss"),
 						Directory = "MediaPickerSample"
 					};
-#if !VISUALSTUDIO
-					#region new style
+
 					pickerController = picker.GetTakePhotoUI (options);
 					PresentViewController (pickerController, true, null);
 
-					var pickerTask = pickerController.GetResultAsync ();
-					await pickerTask;
+					MediaFile media;
 
-					// We need to dismiss the controller ourselves
-					await DismissViewControllerAsync (true); // woot! async-ified iOS method
+					try 
+					{
+						var pickerTask = pickerController.GetResultAsync ();
+						await pickerTask;
 
-					// User canceled or something went wrong
-					if (pickerTask.IsCanceled || pickerTask.IsFaulted)
-						return;
+						// User canceled or something went wrong
+						if (pickerTask.IsCanceled || pickerTask.IsFaulted) {
+							fileName = "";
+							return;
+						}
 
-					// We get back a MediaFile
-					MediaFile media = pickerTask.Result;
-					fileName = media.Path;
-					PhotoImageView.Image = new UIImage (fileName);
-					SavePicture(fileName);
+						media = pickerTask.Result;
+						fileName = media.Path;
 
-					#endregion
-#else
-					#region old style (deprecated)
-					var t = picker.TakePhotoAsync (options); //.ContinueWith (t => {
-					await t;
-					if (t.IsCanceled) {
-						Console.WriteLine ("User canceled");
-						fileName = "cancelled";
-						//InvokeOnMainThread(() =>{
-						NavigationController.PopToRootViewController(false);
-						//});
-						return;
+						// We need to dismiss the controller ourselves
+						await DismissViewControllerAsync (true); // woot! async-ified iOS method
 					}
-					Console.WriteLine (t.Result.Path);
-					fileName = t.Result.Path;
-					//InvokeOnMainThread(() =>{
-					PhotoImageView.Image = new UIImage (fileName);
-					//});
-					SavePicture(fileName);
-					//});
-					#endregion
-#endif
-				}
-			} else if (fileName == "cancelled") {
+					catch(AggregateException ae) {
+						fileName = "";
+						Console.WriteLine("Error while huh", ae.Message);
+					} catch(Exception e) {
+						fileName = "";
+						Console.WriteLine("Error while cancelling", e.Message);
+					}
+
+					if (String.IsNullOrEmpty (fileName)) {
+						await DismissViewControllerAsync (true); 
+					} else {
+						PhotoImageView.Image = new UIImage (fileName);
+						SavePicture(fileName);
+					}
+            	}
+			}  
+			else if (fileName == "cancelled") {
 				NavigationController.PopToRootViewController (true);
 			} else {
 				// populate screen with existing item
@@ -175,7 +165,8 @@ namespace SoMA
 		partial void ShareAppnet_TouchUpInside (UIButton sender)
 		{
 			var appnet = new AppDotNetService { 
-				ClientId = ServiceConstants.AppDotNetClientId
+				ClientId = ServiceConstants.AppDotNetClientId,
+				RedirectUrl = new System.Uri (ServiceConstants.AppDotRedirectUrl)
 			};
 			Share(appnet);
 		}
@@ -197,8 +188,12 @@ namespace SoMA
 		{
 			// 2. Create an item to share
 			var item = new Item { Text = "Xamarin.SoMA ... Social Mobile & Auth! " };
-			item.Images.Add(new ImageData(fileName));
-			if (isLocationSet) item.Links.Add(new Uri( "https://maps.google.com/maps?q=" + location));
+
+			if (fileName != "in-progress" && fileName != "cancelled") // was never set, no image 
+    			item.Images.Add (new ImageData (fileName));
+	
+    		if (isLocationSet) 
+                item.Links.Add(new Uri( "https://maps.google.com/maps?q=" + location));
 
 			// 3. Present the UI on iOS
 			var shareController = service.GetShareUI (item, result => {

@@ -13,6 +13,9 @@ namespace iOS
 	partial class iOSViewController
 	{
 		[Outlet]
+		MonoTouch.UIKit.UIButton BetterAsyncButton { get; set; }
+
+		[Outlet]
 		MonoTouch.UIKit.UIImageView DownloadedImageView { get; set; }
 
 		[Outlet]
@@ -23,6 +26,12 @@ namespace iOS
 
 		[Outlet]
 		MonoTouch.UIKit.UITextView ResultTextView { get; set; }
+
+		[Action ("Naysync_TouchUpInside:")]
+		partial void Naysync_TouchUpInside (MonoTouch.UIKit.UIButton sender);
+
+		[Action ("UIButton14_TouchUpInside:")]
+		partial void UIButton14_TouchUpInside (MonoTouch.UIKit.UIButton sender);
 
 		[Action ("UIButton9_TouchUpInside:")]
 		partial void UIButton9_TouchUpInside (MonoTouch.UIKit.UIButton sender);
@@ -47,6 +56,11 @@ namespace iOS
 			if (ResultTextView != null) {
 				ResultTextView.Dispose ();
 				ResultTextView = null;
+			}
+
+			if (BetterAsyncButton != null) {
+				BetterAsyncButton.Dispose ();
+				BetterAsyncButton = null;
 			}
 		}
 	}

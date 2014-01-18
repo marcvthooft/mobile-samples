@@ -8,6 +8,7 @@ using Android.OS;
 using System.Threading.Tasks;
 using System.Net.Http;
 using System.IO;
+using Android.Graphics;
 
 namespace Droid
 {
@@ -60,10 +61,10 @@ namespace Droid
 
 			Task<string> contentsTask = httpClient.GetStringAsync("http://xamarin.com"); // async method!
 
-			ResultEditText.Text += "DownloadHomepage method continues after async call. . . . .\n";
 
 			// await! control returns to the caller and the task continues to run on another thread
 			string contents = await contentsTask;
+			ResultEditText.Text += "DownloadHomepage method continues after async call. . . . .\n";
 
 			// After contentTask completes, you can calculate the length of the string.
 			int exampleInt = contents.Length;
@@ -77,12 +78,16 @@ namespace Droid
 
 			string documentsPath = System.Environment.GetFolderPath(System.Environment.SpecialFolder.Personal);
 			string localFilename = "team.jpg";
-			string localPath = Path.Combine (documentsPath, localFilename);
+			string localPath = System.IO.Path.Combine (documentsPath, localFilename);
 			File.WriteAllBytes (localPath, imageBytes); // writes to local storage   
 
 			ResultTextView.Text += "Downloaded the image.\n";
 
-			// ImageView stuff goes here
+			var localImage = new Java.IO.File (localPath);
+			if (localImage.Exists ()) {
+				var teamBitmap = BitmapFactory.DecodeFile (localImage.AbsolutePath);
+				DownloadedImageView.SetImageBitmap (teamBitmap);
+			}
 
 			ResultEditText.Text += contents; // just dump the entire HTML
 			return exampleInt; // Task<TResult> returns an object of type TResult, in this case int
